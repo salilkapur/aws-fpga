@@ -1,0 +1,13 @@
+#-----------------------------------------------------------
+# xsim v2017.4.op (64-bit)
+# SW Build 2193837 on Tue Apr 10 18:06:59 MDT 2018
+# IP Build 2189296 on Tue Apr 10 19:39:46 MDT 2018
+# Start of session at: Fri Sep 21 03:12:12 2018
+# Process ID: 2091
+# Current directory: /home/centos/salil/Work/aws-fpga/hdk/cl/examples/cl_hello_world/verif/sim/vivado/test_null
+# Command line: xsim -log test_null.log -mode tcl -source {xsim.dir/tb/xsim_script.tcl}
+# Log file: /home/centos/salil/Work/aws-fpga/hdk/cl/examples/cl_hello_world/verif/sim/vivado/test_null/test_null.log
+# Journal file: /home/centos/salil/Work/aws-fpga/hdk/cl/examples/cl_hello_world/verif/sim/vivado/test_null/xsim.jou
+#-----------------------------------------------------------
+source xsim.dir/tb/xsim_script.tcl
+source /home/centos/salil/Work/aws-fpga/hdk/cl/examples/cl_hello_world/verif/scripts/waves.tcl

@@ -1,0 +1,13 @@
+#-----------------------------------------------------------
+# Webtalk v2017.4.op (64-bit)
+# SW Build 2193837 on Tue Apr 10 18:06:59 MDT 2018
+# IP Build 2189296 on Tue Apr 10 19:39:46 MDT 2018
+# Start of session at: Fri Sep 21 03:12:11 2018
+# Process ID: 2032
+# Current directory: /home/centos/salil/Work/aws-fpga/hdk/cl/examples/cl_hello_world/verif/sim/vivado/test_null
+# Command line: wbtcv -mode batch -source /home/centos/salil/Work/aws-fpga/hdk/cl/examples/cl_hello_world/verif/sim/vivado/test_null/xsim.dir/tb/webtalk/xsim_webtalk.tcl -notrace
+# Log file: /home/centos/salil/Work/aws-fpga/hdk/cl/examples/cl_hello_world/verif/sim/vivado/test_null/webtalk.log
+# Journal file: /home/centos/salil/Work/aws-fpga/hdk/cl/examples/cl_hello_world/verif/sim/vivado/test_null/webtalk.jou
+#-----------------------------------------------------------
+source /home/centos/salil/Work/aws-fpga/hdk/cl/examples/cl_hello_world/verif/sim/vivado/test_null/xsim.dir/tb/webtalk/xsim_webtalk.tcl -notrace
+INFO: [Common 17-206] Exiting Webtalk at Fri Sep 21 03:12:11 2018...
