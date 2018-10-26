@@ -1,3 +1,31 @@
+/*
+* MASTER - Shell (Host)
+* SLAVE  - FPGA
+* There are five channels
+* Write address channel
+* Write data channel
+* Write response channel
+* Read address channel
+* Read data channel
+*
+* AXI Handshake protocol
+* The source generates the VA L I D signal to indicate when the address, data or
+* control in formation is available. The destination generates the READY
+* signal to indicate that it can accept the information. Transfer occurs
+* only when both the VA L I D and READY signals are HIGH.
+* 
+* This is used by all five channels
+* 
+* Think of all channels from the perspective of the master.
+* Write request means - Master is requesting you to write the data that it is
+* sending
+* Read data request means - Master is requesting to read data from the slave
+*
+* TODO: Make this the top module
+* TODO: Put each channel operation into a different module
+* TODO: Make coding style changes to this code
+*/
+
 module cl_hello_world (
    `include "cl_ports.vh" // Fixed port definition
 );
@@ -34,6 +62,14 @@ logic rst_main_n_sync;
 `include "unused_sh_bar1_template.inc"
 `include "unused_apppf_irq_template.inc"
 
+
+//-------------------------------------------------
+// ID Values (cl_hello_world_defines.vh)
+//-------------------------------------------------
+// These lines can be removed
+assign cl_sh_id0[31:0] = `CL_SH_ID0;
+assign cl_sh_id1[31:0] = `CL_SH_ID1;
+
 //-------------------------------------------------
 // Wires
 //-------------------------------------------------
@@ -46,12 +82,6 @@ logic [15:0] sh_cl_status_vdip_q;
 logic [15:0] sh_cl_status_vdip_q2;
 logic [31:0] hello_world_q;
 
-//-------------------------------------------------
-// ID Values (cl_hello_world_defines.vh)
-//-------------------------------------------------
-
-assign cl_sh_id0[31:0] = `CL_SH_ID0;
-assign cl_sh_id1[31:0] = `CL_SH_ID1;
 
 //-------------------------------------------------
 // Reset Synchronization
@@ -72,6 +102,7 @@ begin
    end
 end
 
+// This will be part of the top module
 //-------------------------------------------------
 // PCIe OCL AXI-L (SH to CL) Timing Flops
 //-------------------------------------------------
@@ -106,7 +137,7 @@ logic        sh_ocl_rready_q;
 axi_register_slice_light AXIL_OCL_REG_SLC (
     .aclk          (clk_main_a0),
     .aresetn       (rst_main_n_sync),
-    .s_axi_awaddr  (sh_ocl_awaddr),
+    .s_axi_awaddr  (sh_ocl_awaddr), // Write address
     .s_axi_awprot   (2'h0),
     .s_axi_awvalid (sh_ocl_awvalid),
     .s_axi_awready (ocl_sh_awready),
@@ -169,15 +200,15 @@ logic [31:0] rdata;
 logic [1:0]  rresp;
 
 // Inputs
-assign awvalid         = sh_ocl_awvalid_q;
-assign awaddr[31:0]    = sh_ocl_awaddr_q;
-assign wvalid          = sh_ocl_wvalid_q;
-assign wdata[31:0]     = sh_ocl_wdata_q;
-assign wstrb[3:0]      = sh_ocl_wstrb_q;
-assign bready          = sh_ocl_bready_q;
-assign arvalid         = sh_ocl_arvalid_q;
-assign araddr[31:0]    = sh_ocl_araddr_q;
-assign rready          = sh_ocl_rready_q;
+assign awvalid         = sh_ocl_awvalid_q; // Write address is valid. Set by master
+assign awaddr[31:0]    = sh_ocl_awaddr_q; // Write address. Set by master
+assign wvalid          = sh_ocl_wvalid_q; // Write data is valid. Means valid write data is available. Set by Master
+assign wdata[31:0]     = sh_ocl_wdata_q; // Write data. Set by master
+assign wstrb[3:0]      = sh_ocl_wstrb_q; // Write strobe. Set by master
+assign bready          = sh_ocl_bready_q; // Master is ready to receive a response
+assign arvalid         = sh_ocl_arvalid_q; // Read address is valid. Set by master
+assign araddr[31:0]    = sh_ocl_araddr_q; // Read address. Set by master
+assign rready          = sh_ocl_rready_q; // Read ready. Set by master
 
 // Outputs
 assign ocl_sh_awready_q = awready;
@@ -189,54 +220,99 @@ assign ocl_sh_rvalid_q  = rvalid;
 assign ocl_sh_rdata_q   = rdata;
 assign ocl_sh_rresp_q   = rresp[1:0];
 
-// Write Request
-logic        wr_active;
-logic [31:0] wr_addr;
+logic [31:0] w_write_address;
 
-always_ff @(posedge clk_main_a0)
-begin
-  if (!rst_main_n_sync) begin
-     wr_active <= 0;
-     wr_addr   <= 0;
-  end
-  else begin
-     wr_active <=  wr_active && bvalid  && bready ? 1'b0     :
-                  ~wr_active && awvalid           ? 1'b1     :
-                                                    wr_active;
-     wr_addr <= awvalid && ~wr_active ? awaddr : wr_addr     ;
-  end
-end
+module write_request write_request_instance(
+    .clk(clk_main_a0),
+    .i_reset(rst_main_n_sync),
+    .i_awaddr(awaddr),
+    .i_awvalid(awvalid),
+    .i_wvalid(wvalid),
+    .i_bvalid(bvalid),
+    .i_bready(bready),
+    .o_awready(awready),
+    .o_wready(wready),
+    .o_write_address(w_write_address)
+);
 
-assign awready = ~wr_active;
-assign wready  =  wr_active && wvalid;
+// --------------------------------------------------------------------------------------------
+// Write Request (From master to slave)
+//logic        wr_active;
+//logic [31:0] wr_addr;
+//
+//always_ff @(posedge clk_main_a0)
+//begin
+//  if (!rst_main_n_sync) begin
+//     wr_active <= 0;
+//     wr_addr   <= 0;
+//  end
+//  else begin
+//     wr_active <=  wr_active && bvalid  && bready ? 1'b0     :
+//                  ~wr_active && awvalid           ? 1'b1     :
+//                                                    wr_active;
+//     wr_addr <= awvalid && ~wr_active ? awaddr : wr_addr     ;
+//  end
+//end
+//
+//assign awready = ~wr_active;
+//assign wready  =  wr_active && wvalid;
+// --------------------------------------------------------------------------------------------
 
+
+module write_response write_response_instance (
+    .clk(clk_main_a0),
+    .i_reset(rst_main_n_sync),
+    .i_bvalid(bvalid),
+    .i_bready(bready),
+    .i_wready(wready),
+    .o_bvalid(bvalid),
+    .o_bresp(bresp)
+);
+
+// --------------------------------------------------------------------------------------------
 // Write Response
-always_ff @(posedge clk_main_a0)
-begin
-  if (!rst_main_n_sync)
-    bvalid <= 0;
-  else
-    bvalid <=  bvalid &&  bready           ? 1'b0  :
-                         ~bvalid && wready ? 1'b1  :
-                                             bvalid;
-end
+//always_ff @(posedge clk_main_a0)
+//begin
+//  if (!rst_main_n_sync)
+//    bvalid <= 0;
+//  else
+//    bvalid <=  bvalid &&  bready           ? 1'b0  :
+//                         ~bvalid && wready ? 1'b1  :
+//                                             bvalid;
+//end
+//
+//assign bresp = 0;
+// --------------------------------------------------------------------------------------------
 
-assign bresp = 0;
 
+module read_request read_request_instance(
+    .clk(clk_main_a0),
+    .i_reset(rst_main_n_sync),
+    .i_arvalid(arvalid),
+    .i_araddr(araddr)
+    .i_rvalid(rvalid),
+    .o_arready(arready),
+    .o_arvalid_internal(arvalid_q),
+    .o_araddr_internal(araddr_q)
+);
+ 
+// --------------------------------------------------------------------------------------------
 // Read Request
-always_ff @(posedge clk_main_a0)
-begin
-   if (!rst_main_n_sync) begin
-      arvalid_q <= 0;
-      araddr_q  <= 0;
-   end
-   else begin
-      arvalid_q <= arvalid;
-      araddr_q  <= arvalid ? araddr : araddr_q;
-   end
-end
+//always_ff @(posedge clk_main_a0)
+//begin
+//   if (!rst_main_n_sync) begin
+//      arvalid_q <= 0;
+//      araddr_q  <= 0;
+//   end
+//   else begin
+//      arvalid_q <= arvalid;
+//      araddr_q  <= arvalid ? araddr : araddr_q;
+//   end
+//end
+//
+//assign arready = !arvalid_q && !rvalid;
+// --------------------------------------------------------------------------------------------
 
-assign arready = !arvalid_q && !rvalid;
 
 // Read Response
 always_ff @(posedge clk_main_a0)
