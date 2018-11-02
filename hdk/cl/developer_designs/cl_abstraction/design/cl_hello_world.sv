@@ -13,9 +13,9 @@
 * control in formation is available. The destination generates the READY
 * signal to indicate that it can accept the information. Transfer occurs
 * only when both the VA L I D and READY signals are HIGH.
-* 
+*
 * This is used by all five channels
-* 
+*
 * Think of all channels from the perspective of the master.
 * Write request means - Master is requesting you to write the data that it is
 * sending
@@ -220,7 +220,13 @@ assign ocl_sh_rvalid_q  = rvalid;
 assign ocl_sh_rdata_q   = rdata;
 assign ocl_sh_rresp_q   = rresp[1:0];
 
-logic [31:0] w_write_address;
+// Registers
+logic [31:0] r_data_internal;
+
+// Wires
+logic [31:0] w_write_address_internal;
+logic [31:0] w_data_internal;
+
 
 module write_request write_request_instance(
     .clk(clk_main_a0),
@@ -295,7 +301,7 @@ module read_request read_request_instance(
     .o_arvalid_internal(arvalid_q),
     .o_araddr_internal(araddr_q)
 );
- 
+
 // --------------------------------------------------------------------------------------------
 // Read Request
 //always_ff @(posedge clk_main_a0)
@@ -313,53 +319,89 @@ module read_request read_request_instance(
 //assign arready = !arvalid_q && !rvalid;
 // --------------------------------------------------------------------------------------------
 
+module read_response read_response_instance(
+    .clk(clk),
+    .i_reset(rst_main_n_sync),
+    .i_rvalid(rvalid),
+    .i_rready(rready),
+    .i_arvalid_internal(arvalid_q),
+    .i_araddr_internal(araddr_q), // We should not need this.
+    .i_data_internal(w_data_internal),
+    .o_rvalid(rvalid),
+    .o_rresp(rresp),
+    .o_rdata(rdata)
+);
 
+// --------------------------------------------------------------------------------------------
 // Read Response
-always_ff @(posedge clk_main_a0)
-begin
-   if (!rst_main_n_sync)
-   begin
-      rvalid <= 0;
-      rdata  <= 0;
-      rresp  <= 0;
-   end
-   else if (rvalid && rready)
-   begin
-      rvalid <= 0;
-      rdata  <= 0;
-      rresp  <= 0;
-   end
-   else if (arvalid_q)
-   begin
-      rvalid <= 1;
-      rdata  <= (araddr_q == `HELLO_WORLD_REG_ADDR) ? hello_world_q_byte_swapped[31:0]:
-                (araddr_q == `VLED_REG_ADDR       ) ? {16'b0,vled_q[15:0]            }:
-                                                      `UNIMPLEMENTED_REG_VALUE        ;
-      rresp  <= 0;
-   end
-end
+//always_ff @(posedge clk_main_a0)
+//begin
+//   if (!rst_main_n_sync)
+//   begin
+//      rvalid <= 0;
+//      rdata  <= 0;
+//      rresp  <= 0;
+//   end
+//   else if (rvalid && rready)
+//   begin
+//      rvalid <= 0;
+//      rdata  <= 0;
+//      rresp  <= 0;
+//   end
+//   else if (arvalid_q)
+//   begin
+//      rvalid <= 1;
+//      rdata  <= (araddr_q == `HELLO_WORLD_REG_ADDR) ? hello_world_q_byte_swapped[31:0]:
+//                (araddr_q == `VLED_REG_ADDR       ) ? {16'b0,vled_q[15:0]            }:
+//                                                      `UNIMPLEMENTED_REG_VALUE        ;
+//      rresp  <= 0;
+//   end
+//end
+// --------------------------------------------------------------------------------------------
+
+
 
 //-------------------------------------------------
 // Hello World Register
 //-------------------------------------------------
 // When read it, returns the byte-flipped value.
 
-always_ff @(posedge clk_main_a0)
+//always_ff @(posedge clk_main_a0)
+//begin
+//   if (!rst_main_n_sync) begin                    // Reset
+//      hello_world_q[31:0] <= 32'h0000_0000;
+//   end
+//   else if (wready & (wr_addr == `HELLO_WORLD_REG_ADDR)) begin
+//      hello_world_q[31:0] <= wdata[31:0]; // wdata should be latched
+//   end
+//   else begin                                // Hold Value
+//      hello_world_q[31:0] <= hello_world_q[31:0];
+//   end
+//end
+//
+//assign hello_world_q_byte_swapped[31:0] = {hello_world_q[7:0],   hello_world_q[15:8],
+//                                           hello_world_q[23:16], hello_world_q[31:24]};
+
+always_ff @(posedge clk)
 begin
-   if (!rst_main_n_sync) begin                    // Reset
-      hello_world_q[31:0] <= 32'h0000_0000;
-   end
-   else if (wready & (wr_addr == `HELLO_WORLD_REG_ADDR)) begin
-      hello_world_q[31:0] <= wdata[31:0];
-   end
-   else begin                                // Hold Value
-      hello_world_q[31:0] <= hello_world_q[31:0];
-   end
+    r_data_internal = w_data_internal;
 end
 
-assign hello_world_q_byte_swapped[31:0] = {hello_world_q[7:0],   hello_world_q[15:8],
-                                           hello_world_q[23:16], hello_world_q[31:24]};
-
+always_comb
+begin
+    if (!rst_main_n_sync)
+    begin
+        w_data_internal = 32'd0;
+    end
+    else if (wready & w_write_request == `HELLO_WORLD_REG_ADDR)
+    begin
+        w_data_internal = {wdata[7:0], wdata[15:8], wdata[23:16], wdata[31:24]};
+    end
+    else
+    begin
+        w_data_internal = r_data_internal
+    end
+end
 //-------------------------------------------------
 // Virtual LED Register
 //-------------------------------------------------

@@ -13,7 +13,7 @@ module write_request(
     i_bready, // AXI
     o_awready,
     o_wready,
-    o_write_address // Internal value
+    o_write_address_internal // Internal value
 );
     input clk;
     input i_reset;
@@ -25,7 +25,7 @@ module write_request(
 
     output logic        o_awready;
     output logic        o_wready;
-    output logic [31:0] o_write_address;
+    output logic [31:0] o_write_address_internal;
 
     logic r_reset;
     logic r_write_active;
@@ -34,9 +34,9 @@ module write_request(
     logic r_bready;
     logic r_awvalid;
     logic r_wvalid;
-    
+
     logic w_write_active;
-    logic w_write_address;
+    logic w_write_address_internal;
 
     always_ff @(posedge clk)
     begin
@@ -56,12 +56,12 @@ module write_request(
         if (!r_reset)
         begin
             w_write_active = 0;
-            w_write_address = 0;
+            w_write_address_internal = 0;
         end
         else
         begin
             w_write_active = r_write_active;
-            w_write_address = r_awaddr;
+            w_write_address_internal = r_awaddr;
         end
 
         if (w_write_active && r_bvalid && r_bready)
@@ -74,14 +74,14 @@ module write_request(
             // There is no existing write happening
             w_write_active = 1;
         end
-    
+
         o_awready = ~w_write_active;
         o_wready = w_write_active && r_wvalid;
 
         // Address handling
         if (w_write_active && ~r_awvalid)
         begin
-            o_write_address = r_awaddr;
+            o_write_address_internal = r_awaddr;
         end
     end
 endmodule
