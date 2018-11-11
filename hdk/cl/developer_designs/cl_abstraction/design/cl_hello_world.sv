@@ -228,7 +228,7 @@ logic [31:0] w_write_address_internal;
 logic [31:0] w_data_internal;
 
 
-module write_request write_request_instance(
+write_request write_request_instance(
     .clk(clk_main_a0),
     .i_reset(rst_main_n_sync),
     .i_awaddr(awaddr),
@@ -238,7 +238,7 @@ module write_request write_request_instance(
     .i_bready(bready),
     .o_awready(awready),
     .o_wready(wready),
-    .o_write_address(w_write_address)
+    .o_write_address_internal(w_write_address)
 );
 
 // --------------------------------------------------------------------------------------------
@@ -265,7 +265,7 @@ module write_request write_request_instance(
 // --------------------------------------------------------------------------------------------
 
 
-module write_response write_response_instance (
+write_response write_response_instance (
     .clk(clk_main_a0),
     .i_reset(rst_main_n_sync),
     .i_bvalid(bvalid),
@@ -291,11 +291,11 @@ module write_response write_response_instance (
 // --------------------------------------------------------------------------------------------
 
 
-module read_request read_request_instance(
+read_request read_request_instance(
     .clk(clk_main_a0),
     .i_reset(rst_main_n_sync),
     .i_arvalid(arvalid),
-    .i_araddr(araddr)
+    .i_araddr(araddr),
     .i_rvalid(rvalid),
     .o_arready(arready),
     .o_arvalid_internal(arvalid_q),
@@ -319,7 +319,7 @@ module read_request read_request_instance(
 //assign arready = !arvalid_q && !rvalid;
 // --------------------------------------------------------------------------------------------
 
-module read_response read_response_instance(
+read_response read_response_instance(
     .clk(clk),
     .i_reset(rst_main_n_sync),
     .i_rvalid(rvalid),
@@ -393,15 +393,16 @@ begin
     begin
         w_data_internal = 32'd0;
     end
-    else if (wready & w_write_request == `HELLO_WORLD_REG_ADDR)
+    else if (wready & (w_write_address == `HELLO_WORLD_REG_ADDR))
     begin
         w_data_internal = {wdata[7:0], wdata[15:8], wdata[23:16], wdata[31:24]};
     end
     else
     begin
-        w_data_internal = r_data_internal
+        w_data_internal = r_data_internal;
     end
 end
+/*
 //-------------------------------------------------
 // Virtual LED Register
 //-------------------------------------------------
@@ -584,5 +585,5 @@ end
                    );
 
 `endif //  `ifndef DISABLE_VJTAG_DEBUG
-
+*/
 endmodule

@@ -13,8 +13,8 @@ module write_response (
     input i_bready;
     input i_wready;
 
-    output          o_bvalid;
-    output [1:0]    o_bresp;
+    output logic          o_bvalid;
+    output logic [1:0]    o_bresp;
 
     logic r_reset;
     logic r_bvalid;
@@ -38,13 +38,13 @@ module write_response (
         else
         begin
             if (r_bvalid && r_bready)
-                o_bvalid = 0; 
+                o_bvalid = 0;
             else if (~r_bvalid && r_wready)
                 o_bvalid = 1;
             else
                 o_bvalid = r_bvalid;
         end
-        
+
         // This can be used to send the response code. Sending OKAY for now.
         // Page 54 for reference
         // http://www.gstitt.ece.ufl.edu/courses/fall15/eel4720_5721/labs/refs/AXI4_specification.pdf#E7.BABBIHDJ
